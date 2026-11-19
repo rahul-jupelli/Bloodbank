@@ -1,0 +1,99 @@
+Step 1. Open Jenkins in your browser.
+
+Step 2. Go to:
+    Manage Jenkins → Tools
+(or Global Tool Configuration in some Jenkins versions).
+
+Step 3. Find the Maven installations section.
+
+Step 4. Add a Maven installation.
+
+Step 5. Give it the name:
+    Maven3
+
+Step 6. Select an installed Maven version or configure the Maven installation
+as required by your Jenkins setup.
+
+Step 7. Save.
+
+The name Maven3 in the pipeline must match the name configured here.
+
+C. CREATE THE JENKINS PIPELINE JOB
+
+Step 1. On the Jenkins dashboard, click New Item.
+
+Step 2. Enter:
+    BloodBank-Pipeline
+
+Step 3. Select Pipeline.
+
+Step 4. Click OK.
+
+Step 5. Scroll to the Pipeline section.
+
+Step 6. For a pipeline stored in the repository, select Pipeline script from
+SCM, choose Git, and enter:
+    https://github.com/sarasrija/BloodBanksystem.git
+
+Step 7. Select the correct branch and set Script Path to:
+    Jenkinsfile
+
+Step 8. Save the job.
+
+If you are entering the script directly in Jenkins, choose Pipeline script
+instead and paste the script below.
+
+D. JENKINSFILE — WINDOWS AGENT USING BATCH STEPS
+
+Create a file named Jenkinsfile in the repository root:
+
+    node {
+        def PROJECT_DIR = 'BloodBanksystem-main'
+
+        stage('Checkout') {
+            checkout scm
+        }
+
+        stage('Build Information') {
+            echo "Build Number: ${env.BUILD_NUMBER}"
+            echo "Workspace: ${env.WORKSPACE}"
+        }
+
+        stage('Clean') {
+            dir(PROJECT_DIR) {
+                bat 'mvn clean'
+            }
+        }
+
+        stage('Install') {
+            dir(PROJECT_DIR) {
+                bat 'mvn install'
+            }
+        }
+
+        stage('Test') {
+            dir(PROJECT_DIR) {
+                bat 'mvn test'
+            }
+        }
+
+        stage('Package') {
+            dir(PROJECT_DIR) {
+                bat 'mvn package'
+            }
+        }
+
+        stage('Verify Artifact') {
+            dir(PROJECT_DIR) {
+                bat 'dir target'
+                bat 'if not exist target\\bloodbank.war exit /b 1'
+            }
+        }
+
+        stage('Archive Artifact') {
+            dir(PROJECT_DIR) {
+                archiveArtifacts artifacts: 'target/bloodbank.war',
+                                 fingerprint: true
+            }
+        }
+    }
