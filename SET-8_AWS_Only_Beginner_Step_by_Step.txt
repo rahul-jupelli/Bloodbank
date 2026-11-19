@@ -1,0 +1,603 @@
+AWS EC2 PRACTICAL — BEGINNER STEP-BY-STEP GUIDE
+SET 8 | Blood Bank Management System
+
+WHAT YOU MUST DO
+1. Create an Ubuntu EC2 virtual machine.
+2. Connect to it from your Windows laptop using SSH.
+3. Install Git, Java and Maven.
+4. Download and build the Blood Bank project.
+5. Install Tomcat and deploy the WAR file.
+6. Open the application from your laptop's browser.
+7. Answer the five scenario questions.
+
+IMPORTANT PROJECT DETAIL
+I inspected the uploaded BloodBanksystem-main.zip. It is a Maven Java web
+application containing JSP pages. Its WAR output is named bloodbank.war.
+A WAR must run inside Tomcat. Do not put the WAR into /var/www/html.
+That directory is for static HTML/CSS/JavaScript files served by Apache.
+
+The uploaded project's web.xml declares Servlet 4.0 / javax.servlet.
+Tomcat 9 is the compatible Tomcat generation for this API. Tomcat 10 uses
+jakarta.servlet and may require application migration.
+
+============================================================
+PART A — CREATE THE UBUNTU EC2 INSTANCE
+============================================================
+
+STEP 1 — Open AWS
+1. Open Chrome.
+2. Go to https://aws.amazon.com/console/
+3. Sign in.
+4. Search for EC2 in the AWS search bar.
+5. Click EC2.
+
+EC2 provides virtual machines. AWS calls each virtual machine an instance.
+
+STEP 2 — Launch an instance
+1. Click Instances.
+2. Click Launch instances.
+3. Enter the name: BloodBank-Server.
+
+STEP 3 — Select Ubuntu
+1. Under Application and OS Images (AMI), select Ubuntu.
+2. Select Ubuntu Server 22.04 LTS for this procedure.
+3. Select the 64-bit x86 image if following these commands exactly.
+
+An AMI is the operating-system image used to create your virtual machine.
+
+STEP 4 — Select an instance type
+1. Choose a small instance type suitable for a lab.
+2. Check the displayed price. Do not assume your account/region has free
+   usage; AWS pricing and eligibility vary.
+
+STEP 5 — Create a key pair
+1. Under Key pair (login), click Create new key pair.
+2. Name it bloodbank-key.
+3. Select RSA.
+4. Select .pem format.
+5. Click Create key pair.
+6. Your browser downloads bloodbank-key.pem.
+
+Keep this file safe. It is your private SSH key. Do not share it or upload it
+to GitHub. Remember the folder where it was downloaded.
+
+STEP 6 — Configure the security group
+A security group is the EC2 instance's network firewall. It controls which
+incoming connections are allowed.
+
+Under Network settings, create/choose these inbound rules:
+
+Rule 1:
+    Type: SSH
+    Port: 22
+    Source: My IP
+
+Rule 2:
+    Type: Custom TCP
+    Port: 8080
+    Source: My IP
+
+Port 22 lets your laptop connect to Ubuntu. Port 8080 lets your browser
+connect to Tomcat for this lab.
+
+Do not open SSH to everyone. If you later host a static Apache website,
+you will also need HTTP port 80.
+
+STEP 7 — Launch
+1. Review the settings.
+2. Click Launch instance.
+3. Wait until Instance state says Running and status checks pass.
+4. Select the instance.
+5. Copy its Public IPv4 address.
+
+It looks like numbers separated by dots. Your address is unique; do not use
+an example address from these instructions.
+
+============================================================
+PART B — CONNECT FROM WINDOWS USING SSH
+============================================================
+
+STEP 8 — Open PowerShell
+1. Press the Windows key.
+2. Type PowerShell.
+3. Open Windows PowerShell or Windows Terminal.
+
+STEP 9 — Go to the downloaded key's folder
+If the key is in Downloads, type:
+
+    cd $HOME\Downloads
+
+Press Enter.
+
+Check the file:
+
+    dir bloodbank-key.pem
+
+If it is not found, locate the downloaded .pem file and change to its folder.
+
+STEP 10 — Connect to EC2
+Type this, replacing the example placeholder with your real public IP:
+
+    ssh -i "bloodbank-key.pem" ubuntu@YOUR_EC2_PUBLIC_IP
+
+Example format only:
+
+    ssh -i "bloodbank-key.pem" ubuntu@54.xxx.xxx.xxx
+
+The first connection may ask whether you trust the host. If you have
+confirmed this is your EC2 instance, type yes and press Enter.
+
+If connected, you will see an Ubuntu terminal prompt. You are now typing
+commands on the AWS server.
+
+If SSH does not connect, check:
+- The EC2 instance is running.
+- You copied the correct Public IPv4 address.
+- Security group inbound SSH TCP 22 allows your current IP.
+- You are using the correct .pem file.
+- If your public IP changed, update the security group's SSH source to My IP.
+
+============================================================
+PART C — INSTALL REQUIRED SOFTWARE
+============================================================
+
+From this point, run commands in the SSH terminal on EC2.
+
+STEP 11 — Update Ubuntu
+
+    sudo apt update
+
+Wait for it to finish. This refreshes Ubuntu's software package list.
+
+STEP 12 — Install Git, Java and Maven
+
+    sudo apt install -y git openjdk-11-jdk maven
+
+Git downloads the source code. Java provides the Java runtime/compiler.
+Maven builds the Java project.
+
+STEP 13 — Check installations
+
+Run each command:
+
+    git --version
+    java -version
+    mvn -version
+
+Each should display a version. If a command is not found, its installation
+did not complete correctly.
+
+============================================================
+PART D — DOWNLOAD AND BUILD THE BLOOD BANK PROJECT
+============================================================
+
+STEP 14 — Clone the repository
+The question paper provides this GitHub repository:
+
+    https://github.com/sarasrija/BloodBanksystem.git
+
+Run:
+
+    git clone https://github.com/sarasrija/BloodBanksystem.git
+
+This downloads the project into a folder normally named BloodBanksystem.
+
+STEP 15 — Enter the folder
+
+    cd BloodBanksystem
+
+STEP 16 — Find pom.xml
+
+    ls
+
+Look for pom.xml. Maven commands must be run from the directory containing
+pom.xml. If you do not see it, locate it:
+
+    find . -name pom.xml
+
+Enter the directory that contains the file.
+
+STEP 17 — Build the project
+
+    mvn clean package
+
+The first build may take time because Maven downloads dependencies.
+Wait until it finishes.
+
+A successful build ends with:
+
+    BUILD SUCCESS
+
+If you see BUILD FAILURE, stop and read the error. Do not continue as though
+a WAR file was created.
+
+STEP 18 — Check the WAR
+
+    ls -l target/
+
+For the uploaded project, the WAR filename is:
+
+    bloodbank.war
+
+Check it:
+
+    ls -l target/bloodbank.war
+
+If the file exists, the project has been packaged.
+
+The uploaded ZIP's outer folder is named BloodBanksystem-main. A Git clone
+may create a folder named BloodBanksystem. The folder name is not important:
+run Maven from the directory containing pom.xml.
+
+============================================================
+PART E — INSTALL AND START TOMCAT 9
+============================================================
+
+Tomcat is the server that runs JSP/Servlet Java web applications.
+The WAR file is deployed into Tomcat's webapps directory.
+
+STEP 19 — Install Tomcat 9
+
+On Ubuntu 22.04, try:
+
+    sudo apt install -y tomcat9
+
+If Ubuntu says the package cannot be located, check your release and package
+availability rather than trying random commands:
+
+    cat /etc/os-release
+    apt-cache policy tomcat9
+    apt-cache search tomcat
+
+Use a Tomcat 9 distribution/package supported by your Ubuntu release.
+The next commands assume the service is named tomcat9.
+
+STEP 20 — Start Tomcat and enable it at boot
+
+    sudo systemctl enable --now tomcat9
+
+STEP 21 — Check Tomcat status
+
+    sudo systemctl status tomcat9
+
+Look for:
+
+    active (running)
+
+If the status view occupies the terminal, press q to exit.
+
+STEP 22 — Check port 8080
+
+    sudo ss -ltnp | grep 8080
+
+You should see a listening entry for port 8080.
+
+STEP 23 — Test Tomcat inside EC2
+
+    curl -I http://localhost:8080/
+
+Tomcat should return an HTTP response. If connection is refused, check
+Tomcat's service status and logs.
+
+============================================================
+PART F — DEPLOY bloodbank.war
+============================================================
+
+STEP 24 — Find Tomcat's webapps directory
+
+For Ubuntu's tomcat9 package, it is commonly:
+
+    /var/lib/tomcat9/webapps/
+
+Check:
+
+    ls -ld /var/lib/tomcat9/webapps/
+
+If it does not exist, find the actual path:
+
+    dpkg -L tomcat9 | grep webapps
+
+Use the directory shown by your installation.
+
+STEP 25 — Copy the WAR into webapps
+
+If you are still in the project directory, run:
+
+    sudo cp target/bloodbank.war /var/lib/tomcat9/webapps/
+
+If you are not in the project directory, first return to it, for example:
+
+    cd ~/BloodBanksystem
+
+Then run the copy command.
+
+STEP 26 — Confirm the WAR is there
+
+    ls -l /var/lib/tomcat9/webapps/
+
+Look for bloodbank.war.
+
+STEP 27 — Restart Tomcat
+
+    sudo systemctl restart tomcat9
+
+Tomcat should detect and deploy the WAR.
+
+STEP 28 — Check logs for deployment errors
+
+    sudo journalctl -u tomcat9 -n 100 --no-pager
+
+If errors appear, read them. Do not assume deployment succeeded.
+
+STEP 29 — Test the application from EC2 itself
+
+    curl -I http://localhost:8080/bloodbank/
+
+Because the WAR is named bloodbank.war, Tomcat normally uses /bloodbank/
+as the application context path.
+
+A 200 response is a good sign. A 404 usually means the URL or deployment
+path needs checking. A 500 means the server reached the application but
+an application/server error occurred.
+
+============================================================
+PART G — OPEN IT IN YOUR LAPTOP BROWSER
+============================================================
+
+STEP 30 — Check the EC2 security group
+1. Go to AWS Console → EC2 → Instances.
+2. Select BloodBank-Server.
+3. Open the Security tab.
+4. Click the security group.
+5. Open Inbound rules.
+6. Confirm this rule exists:
+
+       Type: Custom TCP
+       Port: 8080
+       Source: My IP
+
+If missing:
+1. Click Edit inbound rules.
+2. Add the rule above.
+3. Save rules.
+
+For this lab, restrict it to your IP rather than opening it to everyone.
+
+STEP 31 — Open the application
+On your laptop, open Chrome and enter:
+
+    http://YOUR_EC2_PUBLIC_IP:8080/bloodbank/
+
+Replace YOUR_EC2_PUBLIC_IP with the actual public IPv4 address shown in
+the EC2 console.
+
+If the Blood Bank page opens, the Java web application is reachable from
+outside EC2.
+
+Project limitation:
+The uploaded ZIP contains index.jsp and inventory.jsp. It has a donor link,
+but the uploaded ZIP does not contain the donor servlet source. The donor
+link may therefore return 404 unless that missing code exists in the GitHub
+repository or is added separately.
+
+============================================================
+PART H — IF THE QUESTION SPECIFICALLY ASKS FOR index.html
+============================================================
+
+This is a separate static website method. It is not how you deploy the WAR.
+
+STEP 32 — Install Apache
+
+    sudo apt update
+    sudo apt install -y apache2
+
+STEP 33 — Start Apache
+
+    sudo systemctl enable --now apache2
+
+STEP 34 — Create a sample index.html
+
+    echo '<h1>Blood Bank Management System</h1>' | sudo tee /var/www/html/index.html
+
+STEP 35 — Check the file
+
+    ls -l /var/www/html/
+
+STEP 36 — Test Apache from EC2
+
+    curl http://localhost/
+
+You should see the HTML response.
+
+STEP 37 — Allow HTTP port 80 in the EC2 security group
+In AWS Console → EC2 → Security Groups → Inbound rules, add:
+
+    Type: HTTP
+    Protocol: TCP
+    Port: 80
+    Source: My IP
+
+For a public website, choose the intended public source range only after
+considering the exposure.
+
+STEP 38 — Open it from your laptop
+
+    http://YOUR_EC2_PUBLIC_IP/
+
+Remember:
+Static Apache page: http://PUBLIC_IP/
+Java WAR on Tomcat: http://PUBLIC_IP:8080/bloodbank/
+
+============================================================
+PART I — TROUBLESHOOTING
+============================================================
+
+If the browser does not load the Java application, check in this order:
+
+1. Is the EC2 instance Running?
+2. Is Tomcat running?
+
+       sudo systemctl status tomcat9
+
+3. Is port 8080 listening?
+
+       sudo ss -ltnp | grep 8080
+
+4. Does the application work inside EC2?
+
+       curl -I http://localhost:8080/bloodbank/
+
+5. Does the security group allow inbound TCP 8080 from your IP?
+6. Are you using the correct public IP?
+7. Are you using the correct URL with /bloodbank/?
+8. Are there deployment errors in the Tomcat logs?
+
+Useful commands:
+
+    sudo systemctl status tomcat9
+    sudo systemctl restart tomcat9
+    sudo journalctl -u tomcat9 -n 100 --no-pager
+    sudo ss -ltnp | grep 8080
+    curl -I http://localhost:8080/
+    curl -I http://localhost:8080/bloodbank/
+    ls -l /var/lib/tomcat9/webapps/
+
+============================================================
+PART J — FIVE SCENARIO QUESTIONS AND DETAILED ANSWERS
+============================================================
+
+QUESTION 1:
+You deployed your index.html or static assets to /var/www/html/ on EC2,
+but the web page still isn't loading. What are two possible issues you
+would check?
+
+ANSWER:
+1. Apache may not be running. Check:
+
+       sudo systemctl status apache2
+
+   If it is stopped, start it:
+
+       sudo systemctl enable --now apache2
+
+2. The EC2 security group may not allow inbound HTTP TCP port 80. Open the
+   security group inbound rules and allow port 80 from the intended source.
+
+Other possible causes include a wrong file path, file permissions, or a
+host firewall blocking the connection.
+
+QUESTION 2:
+You have a simple index.html file on your laptop and launched an EC2
+instance. The instance is running, but when you open the public IP in a
+browser, the page doesn't load. What initial steps will you take?
+
+ANSWER — FOLLOW THESE STEPS:
+1. Connect to EC2:
+
+       ssh -i "bloodbank-key.pem" ubuntu@YOUR_EC2_PUBLIC_IP
+
+2. Update Ubuntu:
+
+       sudo apt update
+
+3. Install Apache:
+
+       sudo apt install -y apache2
+
+4. Start Apache:
+
+       sudo systemctl enable --now apache2
+
+5. From PowerShell on your LAPTOP, copy the HTML file to EC2:
+
+       scp -i "bloodbank-key.pem" "index.html" ubuntu@YOUR_EC2_PUBLIC_IP:/home/ubuntu/
+
+6. Back in the EC2 SSH terminal, copy it into Apache's directory:
+
+       sudo cp /home/ubuntu/index.html /var/www/html/index.html
+
+7. Check it:
+
+       ls -l /var/www/html/
+
+8. Test locally:
+
+       curl http://localhost/
+
+9. Allow inbound HTTP TCP port 80 in the EC2 security group.
+
+10. Open this on your laptop:
+
+       http://YOUR_EC2_PUBLIC_IP/
+
+QUESTION 3:
+You can access your web application locally on EC2 using curl localhost:8080,
+but not from your external browser. What AWS setting is likely missing or
+misconfigured?
+
+ANSWER:
+The EC2 security group's inbound rule for TCP port 8080 is likely missing
+or incorrect.
+
+To fix:
+1. Open AWS Console.
+2. Open EC2 and select the instance.
+3. Open Security.
+4. Click the security group.
+5. Click Edit inbound rules.
+6. Add Custom TCP, port 8080, source My IP.
+7. Save the rule.
+8. Try the browser again.
+
+If it still fails, check network ACLs and the Ubuntu host firewall.
+
+QUESTION 4:
+You want to automate the deployment of your web assets whenever you restart
+the EC2 instance. Which EC2 feature can run setup commands automatically
+during instance startup?
+
+ANSWER:
+EC2 User Data can provide startup commands. On Ubuntu, cloud-init processes
+the user-data script.
+
+Example for a simple Apache page:
+
+    #!/bin/bash
+    apt-get update
+    apt-get install -y apache2
+    systemctl enable apache2
+    systemctl start apache2
+    echo '<h1>Blood Bank Server</h1>' > /var/www/html/index.html
+
+Important: by default, user-data scripts commonly run on first boot, not
+on every reboot. If a command must run on every reboot, configure a systemd
+service or configure cloud-init for that behavior.
+
+QUESTION 5:
+Why should SSH access (Port 22) be restricted in security group settings?
+
+ANSWER:
+SSH gives remote administrative access to the EC2 machine. If port 22 is
+open to everyone on the internet, attackers can repeatedly attempt
+unauthorized access.
+
+Therefore:
+1. Allow SSH only from trusted IP addresses, preferably My IP for a lab.
+2. Use key-based authentication.
+3. Keep the .pem private key secret.
+4. Do not expose SSH to all IP addresses without a specific need.
+
+============================================================
+PART K — WHEN YOU FINISH THE PRACTICAL
+============================================================
+
+AWS resources can cost money. When finished:
+
+- Stop the instance if you only want to pause it and keep it for later.
+- Terminate it if you no longer need it.
+- Stopping and terminating are different.
+- Check whether attached storage, snapshots, Elastic IPs, or other resources
+  remain and may still incur charges.
+- Do not delete your .pem key if you may need to connect again.
+
+END OF AWS-ONLY PRACTICAL GUIDE
