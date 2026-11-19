@@ -1,5 +1,5 @@
 node {
-    def PROJECT_DIR = 'BloodBanksystem-main'
+    def PROJECT_DIR = '.'
 
     stage('Checkout') {
         checkout scm
