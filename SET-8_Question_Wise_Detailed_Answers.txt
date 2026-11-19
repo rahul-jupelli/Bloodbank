@@ -1,0 +1,1448 @@
+SET–8: SOFTWARE ENGINEERING LAB INTERNAL II
+QUESTION-WISE ANSWERS AND PRACTICAL EXECUTION PROCEDURES
+
+Project: Blood Bank Management System
+Question paper: SET-8(2).docx
+Uploaded project archive: BloodBanksystem-main.zip
+
+HOW TO USE THIS DOCUMENT
+For every practical:
+1. The practical task from the question paper is written first.
+2. The answer/configuration needed for that task is given.
+3. The exact procedure to perform it is listed in execution order.
+4. The expected result and checks are included.
+5. Each scenario-based question is repeated and answered directly.
+
+Do not copy example IP addresses, passwords, key names, or folder names
+literally. Replace them with the values from your own computer/lab.
+
+============================================================
+PRACTICAL 1 — JENKINS: SCRIPTED PIPELINE & BUILD TRIGGERS
+[25 MARKS]
+============================================================
+
+QUESTION 1 — Configure a pipeline script with tool declarations and stage
+blocks. Execute Maven goals (clean, install, test, package) within batch steps.
+
+ANSWER
+
+A Jenkins scripted pipeline is written in a file named Jenkinsfile. It defines
+the stages Jenkins must execute. The Maven commands are run from the folder
+that contains pom.xml.
+
+I inspected the uploaded ZIP. Its project folder is:
+    BloodBanksystem-main
+
+The Maven file is:
+    BloodBanksystem-main/pom.xml
+
+The WAR name configured by the project is:
+    bloodbank.war
+
+Therefore, if you extract the ZIP and keep its folder name, the Jenkins
+pipeline must enter BloodBanksystem-main before running Maven.
+
+A. PREPARE THE PROJECT
+
+Step 1. Extract BloodBanksystem-main.zip.
+
+Step 2. Open the extracted folder.
+
+Step 3. Confirm that pom.xml is present:
+    BloodBanksystem-main/
+        pom.xml
+        src/
+        target/
+
+Step 4. If pom.xml is directly in the Jenkins workspace after checkout,
+you do not need to enter another folder. In that case use PROJECT_DIR = '.'.
+If the project is inside BloodBanksystem-main, use that folder name.
+
+B. CONFIGURE MAVEN IN JENKINS
+
+Step 1. Open Jenkins in your browser.
+
+Step 2. Go to:
+    Manage Jenkins → Tools
+(or Global Tool Configuration in some Jenkins versions).
+
+Step 3. Find the Maven installations section.
+
+Step 4. Add a Maven installation.
+
+Step 5. Give it the name:
+    Maven3
+
+Step 6. Select an installed Maven version or configure the Maven installation
+as required by your Jenkins setup.
+
+Step 7. Save.
+
+The name Maven3 in the pipeline must match the name configured here.
+
+C. CREATE THE JENKINS PIPELINE JOB
+
+Step 1. On the Jenkins dashboard, click New Item.
+
+Step 2. Enter:
+    BloodBank-Pipeline
+
+Step 3. Select Pipeline.
+
+Step 4. Click OK.
+
+Step 5. Scroll to the Pipeline section.
+
+Step 6. For a pipeline stored in the repository, select Pipeline script from
+SCM, choose Git, and enter:
+    https://github.com/sarasrija/BloodBanksystem.git
+
+Step 7. Select the correct branch and set Script Path to:
+    Jenkinsfile
+
+Step 8. Save the job.
+
+If you are entering the script directly in Jenkins, choose Pipeline script
+instead and paste the script below.
+
+D. JENKINSFILE — WINDOWS AGENT USING BATCH STEPS
+
+Create a file named Jenkinsfile in the repository root:
+
+    node {
+        def PROJECT_DIR = 'BloodBanksystem-main'
+
+        stage('Checkout') {
+            checkout scm
+        }
+
+        stage('Build Information') {
+            echo "Build Number: ${env.BUILD_NUMBER}"
+            echo "Workspace: ${env.WORKSPACE}"
+        }
+
+        stage('Clean') {
+            dir(PROJECT_DIR) {
+                bat 'mvn clean'
+            }
+        }
+
+        stage('Install') {
+            dir(PROJECT_DIR) {
+                bat 'mvn install'
+            }
+        }
+
+        stage('Test') {
+            dir(PROJECT_DIR) {
+                bat 'mvn test'
+            }
+        }
+
+        stage('Package') {
+            dir(PROJECT_DIR) {
+                bat 'mvn package'
+            }
+        }
+
+        stage('Verify Artifact') {
+            dir(PROJECT_DIR) {
+                bat 'dir target'
+                bat 'if not exist target\\bloodbank.war exit /b 1'
+            }
+        }
+
+        stage('Archive Artifact') {
+            dir(PROJECT_DIR) {
+                archiveArtifacts artifacts: 'target/bloodbank.war',
+                                 fingerprint: true
+            }
+        }
+    }
+
+IMPORTANT FOLDER SETTING:
+If pom.xml is directly in the Jenkins workspace, replace:
+    def PROJECT_DIR = 'BloodBanksystem-main'
+with:
+    def PROJECT_DIR = '.'
+
+If the checked-out project folder has another name, use that exact folder
+name. The directory must contain pom.xml.
+
+E. WHAT EACH PART DOES
+
+node:
+    Allocates a Jenkins executor to run the pipeline.
+
+stage('Clean'), stage('Install'), etc.:
+    Create named stages so the build progression is visible in Jenkins.
+
+dir(PROJECT_DIR):
+    Runs the enclosed commands from the project directory.
+
+bat:
+    Executes a Windows batch command. The question specifically asks for
+    batch steps.
+
+checkout scm:
+    Checks out the source from the SCM configuration of the Pipeline job.
+
+env.BUILD_NUMBER:
+    Jenkins variable containing the current build number.
+
+archiveArtifacts:
+    Saves the generated WAR file as a Jenkins build artifact.
+
+MAVEN COMMAND MEANINGS
+
+    mvn clean
+        Removes previous build output, normally the target folder.
+
+    mvn install
+        Runs Maven's earlier lifecycle phases and installs the artifact
+        into the local Maven repository.
+
+    mvn test
+        Runs the project's tests.
+
+    mvn package
+        Packages the application. This project creates a WAR file.
+
+Important Maven detail:
+The install lifecycle already includes test and package phases. Therefore,
+running install followed by test and package repeats some Maven work. The
+question explicitly asks for all four goals, so the pipeline above shows all
+four as separate stages for the lab demonstration.
+
+F. RUN THE PIPELINE
+
+Step 1. Open the BloodBank-Pipeline job.
+
+Step 2. Click Build Now.
+
+Step 3. Click the build number that appears in Build History.
+
+Step 4. Click Console Output.
+
+Step 5. Watch the stages execute in this order:
+    Checkout
+    Build Information
+    Clean
+    Install
+    Test
+    Package
+    Verify Artifact
+    Archive Artifact
+
+Step 6. Confirm Maven reports:
+    BUILD SUCCESS
+
+Step 7. Confirm the file exists:
+    BloodBanksystem-main/target/bloodbank.war
+
+Step 8. Open the build page and confirm bloodbank.war is listed under
+Artifacts.
+
+G. IF THE JENKINS AGENT IS LINUX
+
+The question asks for batch steps, so use the Windows version above if your
+Jenkins agent is Windows. On a Linux agent, use sh instead of bat:
+
+    sh 'mvn clean'
+
+The remaining Maven commands are similarly:
+    sh 'mvn install'
+    sh 'mvn test'
+    sh 'mvn package'
+
+Do not use bat on a Linux agent.
+
+H. EXPECTED OUTPUT
+
+The Jenkins stage view should show the stages in order. The Console Output
+should show Maven execution and BUILD SUCCESS if all commands pass. The
+archived artifact should be:
+    target/bloodbank.war
+
+------------------------------------------------------------
+SCENARIO-BASED QUESTIONS — JENKINS
+------------------------------------------------------------
+
+QUESTION 1. The project folder name is not mavenjava but bloodbankapp —
+which parts of the script must you edit?
+
+ANSWER:
+Change the directory variable and every path that depends on it.
+
+For example, change:
+    def PROJECT_DIR = 'mavenjava'
+
+to:
+    def PROJECT_DIR = 'bloodbankapp'
+
+The dir(PROJECT_DIR) blocks will then run Maven inside bloodbankapp.
+The artifact path inside that directory remains target/bloodbank.war only
+if the project's pom.xml creates that exact WAR name.
+
+For the ZIP uploaded with this question, the folder is actually
+BloodBanksystem-main. If pom.xml is directly in the Jenkins workspace,
+use '.' instead.
+
+QUESTION 2. If the install stage fails, will the subsequent test and package
+stages still run in this scripted pipeline?
+
+ANSWER:
+No. In the pipeline shown, a failed bat command throws an error. Jenkins
+stops the normal sequential pipeline at that point. The Test and Package
+stages will not run.
+
+They can continue only if the failure is deliberately caught, for example
+with try/catch or catchError. Do not catch errors unless continuing is
+actually required.
+
+QUESTION 3. Your test cases failed, but the pipeline still continued (or
+failed depending on configuration)—how does Jenkins handle step execution
+in the test stage?
+
+ANSWER:
+Jenkins checks the exit code returned by the Maven command. If Maven tests
+fail, Maven normally returns a non-zero exit code. The bat step treats this
+as a failure, so the pipeline normally stops.
+
+If the pipeline catches the error, Jenkins can continue and the build result
+can be marked UNSTABLE or another result chosen by the script.
+
+Example that allows later stages to run while marking the build unstable:
+
+    stage('Test') {
+        dir(PROJECT_DIR) {
+            catchError(buildResult: 'UNSTABLE',
+                       stageResult: 'FAILURE') {
+                bat 'mvn test'
+            }
+        }
+    }
+
+QUESTION 4. If you want to print the current build number inside the console
+logs for auditing, how do you reference it in the pipeline script?
+
+ANSWER:
+Use Jenkins' BUILD_NUMBER environment variable:
+
+    echo "Build Number: ${env.BUILD_NUMBER}"
+
+It prints the current Jenkins build number in Console Output.
+
+QUESTION 5. What is the role of Jenkins in a Continuous Integration
+pipeline?
+
+ANSWER:
+Jenkins automates the Continuous Integration process. It can obtain source
+code from a version-control repository, compile/build the application, run
+tests, package the application, and report whether the build succeeded or
+failed. This gives developers quick feedback when a code change causes a
+problem and reduces repeated manual work.
+
+============================================================
+PRACTICAL 2 — AWS: CLOUD DEPLOYMENT USING EC2
+[25 MARKS]
+============================================================
+
+QUESTION 1 — Provision an Ubuntu EC2 instance and install required tools
+via SSH.
+
+ANSWER
+
+EC2 is an AWS virtual machine. In this practical, create an Ubuntu instance,
+connect to it through SSH, and install the tools needed to build and run
+the Blood Bank web application.
+
+A. CREATE THE EC2 INSTANCE
+
+Step 1. Sign in to the AWS Management Console.
+
+Step 2. Open the EC2 service.
+
+Step 3. Click Launch Instance.
+
+Step 4. Enter an instance name, for example:
+    BloodBank-Server
+
+Step 5. Select an Ubuntu Server LTS image.
+
+Step 6. Select an instance type suitable for your lab.
+
+Step 7. Create or select a key pair.
+
+Step 8. Download the private key file (.pem). Keep it private. Do not share it.
+
+Step 9. Under Network settings, configure inbound rules:
+    SSH   TCP 22   Source: My IP
+    HTTP  TCP 80   Source: as required for the lab
+    Custom TCP 8080 Source: your IP for a temporary Tomcat test
+
+Port 8080 is only needed if you intend to access Tomcat directly from outside.
+For a production deployment, use a reverse proxy and HTTPS rather than
+exposing application ports broadly.
+
+Step 10. Launch the instance.
+
+Step 11. Wait until the instance state is Running and status checks pass.
+
+Step 12. Copy the Public IPv4 address.
+
+B. CONNECT TO UBUNTU USING SSH
+
+On Windows, open PowerShell in the folder containing your .pem file.
+
+Run:
+
+    ssh -i "my-key.pem" ubuntu@EC2_PUBLIC_IP
+
+Replace:
+    my-key.pem       with your downloaded key filename
+    EC2_PUBLIC_IP    with the EC2 public IPv4 address
+
+If SSH asks you to confirm the host, verify the prompt and continue.
+
+If the key permissions are too open, restrict access to the private key.
+On Linux/macOS, a common command is:
+
+    chmod 400 my-key.pem
+
+C. INSTALL REQUIRED TOOLS
+
+After SSH connects, run these commands on the EC2 Ubuntu machine:
+
+Step 1. Update package information:
+    sudo apt update
+
+Step 2. Install Git:
+    sudo apt install -y git
+
+Step 3. Install Java:
+    sudo apt install -y openjdk-17-jdk
+
+Step 4. Install Maven:
+    sudo apt install -y maven
+
+Step 5. Verify Java:
+    java -version
+
+Step 6. Verify Maven:
+    mvn -version
+
+The uploaded project sets Java source/target compatibility to Java 8. A
+newer JDK can often build Java 8-targeted code, but if compatibility errors
+occur, use a compatible JDK/compiler configuration.
+
+QUESTION 2 — Configure web server paths and deployment directories.
+
+ANSWER
+
+The question describes both static pages and Java web applications. These
+are deployed differently:
+
+- Static HTML/CSS/JavaScript files can be served by Apache from
+  /var/www/html on Ubuntu.
+- The supplied Blood Bank project is a Maven WAR/JSP application. It must
+  be deployed to a servlet container such as Tomcat, not copied into
+  /var/www/html as though it were a static website.
+
+A. BUILD THE BLOOD BANK WAR ON EC2
+
+Step 1. Clone the repository:
+
+    git clone https://github.com/sarasrija/BloodBanksystem.git
+
+Step 2. Enter the folder created by Git:
+
+    cd BloodBanksystem
+
+Step 3. Check for pom.xml:
+
+    ls
+    find . -maxdepth 3 -name pom.xml
+
+Step 4. Make sure you are in the directory containing pom.xml.
+
+Step 5. Build:
+
+    mvn clean package
+
+Step 6. Check the generated WAR:
+
+    ls -l target/
+    ls -l target/bloodbank.war
+
+If you use the uploaded ZIP instead of cloning, copy it to EC2, unzip it,
+and enter BloodBanksystem-main before running Maven.
+
+B. INSTALL TOMCAT
+
+The supplied web.xml declares Servlet 4.0 and uses javax.servlet naming.
+Tomcat 9 is the conventional container for Servlet 4.0 / javax.servlet
+applications. Tomcat 10 changed to jakarta.servlet APIs. Use a compatible
+Tomcat 9 installation for this application unless you migrate the application
+to Jakarta APIs.
+
+Install a Tomcat 9 distribution/package supported by your Ubuntu release.
+After installation, identify the actual service name and webapps directory.
+Do not assume Tomcat 9 and Tomcat 10 use identical package names or paths.
+
+For a systemd service named tomcat9, check:
+
+    sudo systemctl status tomcat9
+
+Start and enable it:
+
+    sudo systemctl enable --now tomcat9
+
+If the service name differs, find it:
+
+    systemctl list-units --type=service | grep -i tomcat
+
+C. DEPLOY THE WAR
+
+Step 1. Locate Tomcat's webapps directory. A common location for a
+distribution-based Tomcat 9 installation is:
+    /opt/tomcat/webapps
+
+A package-based installation may use a different path. Check the actual
+installation rather than assuming this example path.
+
+Step 2. Copy the WAR into the webapps directory. Example only:
+
+    sudo cp target/bloodbank.war /opt/tomcat/webapps/
+
+Step 3. Restart Tomcat:
+
+    sudo systemctl restart tomcat9
+
+Step 4. Check Tomcat logs:
+
+    sudo journalctl -u tomcat9 -n 100 --no-pager
+
+Step 5. Test locally on EC2:
+
+    curl -I http://localhost:8080/bloodbank/
+
+Step 6. If local access works and the security group permits TCP 8080,
+open:
+
+    http://EC2_PUBLIC_IP:8080/bloodbank/
+
+The WAR is named bloodbank.war, so Tomcat normally deploys it under the
+/bloodbank context path.
+
+D. STATIC WEBSITE ALTERNATIVE — IF THE TASK REQUIRES index.html
+
+Step 1. Install Apache:
+
+    sudo apt update
+    sudo apt install -y apache2
+
+Step 2. Start Apache and enable it at boot:
+
+    sudo systemctl enable --now apache2
+
+Step 3. Copy the static website files into:
+    /var/www/html/
+
+For a quick test, create an index page:
+
+    echo '<h1>Blood Bank Management System</h1>' | \
+      sudo tee /var/www/html/index.html
+
+Step 4. Test locally:
+
+    curl http://localhost/
+
+Step 5. Ensure the EC2 security group allows inbound TCP port 80.
+
+Step 6. Open in a browser:
+
+    http://EC2_PUBLIC_IP/
+
+EXPECTED RESULT
+
+For Apache static hosting, the page is reached at:
+    http://EC2_PUBLIC_IP/
+
+For the Java WAR, the application is normally reached at:
+    http://EC2_PUBLIC_IP:8080/bloodbank/
+
+Do not confuse the two deployment methods.
+
+------------------------------------------------------------
+SCENARIO-BASED QUESTIONS — AWS EC2
+------------------------------------------------------------
+
+QUESTION 1. You deployed your index.html or static assets to /var/www/html/
+on EC2, but the web page still is not loading. What are two possible issues
+you would check?
+
+ANSWER:
+1. Apache may not be installed or running. Check:
+
+       sudo systemctl status apache2
+
+   If needed, start it:
+
+       sudo systemctl enable --now apache2
+
+2. The EC2 security group may not allow inbound HTTP traffic on TCP port 80.
+   Open the EC2 security group inbound rules and add HTTP TCP 80 from the
+   intended source.
+
+Other checks include the file path, file permissions, public IP, and
+host firewall.
+
+QUESTION 2. You have a simple index.html file on your laptop and launched
+an EC2 instance. The instance is running, but when you open the public IP
+in a browser, the page does not load. What initial steps will you take?
+
+ANSWER:
+1. Connect to the EC2 instance using SSH.
+2. Install Apache:
+
+       sudo apt update
+       sudo apt install -y apache2
+
+3. Start Apache:
+
+       sudo systemctl enable --now apache2
+
+4. Copy the local index.html file to the EC2 instance's
+   /var/www/html/ directory using SCP or another secure transfer method.
+5. Check that the file exists:
+
+       ls -l /var/www/html/
+
+6. Test Apache locally:
+
+       curl http://localhost/
+
+7. Check that the EC2 security group allows inbound TCP port 80.
+8. Open http://EC2_PUBLIC_IP/ in the browser.
+
+QUESTION 3. You can access your web application locally on the EC2 instance
+using curl localhost:8080, but not from your external browser. What AWS
+setting is likely missing or misconfigured?
+
+ANSWER:
+The EC2 security group's inbound rule for TCP port 8080 is likely missing
+or incorrect. Add an inbound TCP 8080 rule from the required source IP/range.
+If the security group is correct, also check network ACLs and the instance's
+host firewall.
+
+QUESTION 4. You want to automate the deployment of your web assets whenever
+you restart the EC2 instance. Which EC2 feature can be used to run setup
+commands automatically during instance startup?
+
+ANSWER:
+EC2 User Data can provide startup commands. On Linux, cloud-init processes
+the user-data script. By default, user-data scripts commonly run on the
+instance's first boot, not automatically on every reboot. If commands must
+run on every reboot, configure a systemd service or configure cloud-init
+for that behavior.
+
+Example first-boot user-data script for Apache:
+
+    #!/bin/bash
+    apt-get update
+    apt-get install -y apache2
+    systemctl enable apache2
+    systemctl start apache2
+    echo '<h1>Blood Bank Server</h1>' > /var/www/html/index.html
+
+QUESTION 5. Why should SSH access (Port 22) be restricted in security group
+settings?
+
+ANSWER:
+SSH provides remote administrative access to the server. If port 22 is
+open to everyone, attackers can repeatedly attempt unauthorized access.
+Restrict SSH to trusted IP addresses, use key-based authentication, and
+protect the private key. This reduces the server's exposure to attacks.
+
+============================================================
+PRACTICAL 3 — KUBERNETES & NAGIOS: MINIKUBE PODS AND
+INFRASTRUCTURE MONITORING
+[25 MARKS]
+============================================================
+
+QUESTION 1 — Initialize a Minikube cluster and manage Pod lifecycles.
+
+ANSWER
+
+Minikube creates a local Kubernetes cluster. kubectl is the command-line
+tool used to manage Kubernetes resources.
+
+A. INSTALL AND CHECK PREREQUISITES
+
+You need:
+    - Docker Desktop or another supported Minikube driver
+    - Minikube
+    - kubectl
+
+Check installation:
+
+    docker --version
+    minikube version
+    kubectl version --client
+
+On Windows, start Docker Desktop before starting Minikube with the Docker
+driver.
+
+B. START THE MINIKUBE CLUSTER
+
+Step 1. Open a terminal.
+
+Step 2. Start Minikube:
+
+    minikube start --driver=docker
+
+Step 3. Check Minikube:
+
+    minikube status
+
+Step 4. Check Kubernetes cluster information:
+
+    kubectl cluster-info
+
+Step 5. Check the node:
+
+    kubectl get nodes
+
+Expected result: the Minikube node should eventually show Ready.
+
+C. BUILD A CONTAINER IMAGE FOR THE BLOOD BANK APPLICATION
+
+Kubernetes deploys container images. The supplied project creates a WAR,
+so first build the WAR and then place it inside a Tomcat container image.
+
+The supplied web.xml declares Servlet 4.0 / javax.servlet, so this example
+uses Tomcat 9.
+
+Step 1. From the project directory, build the WAR:
+
+    mvn clean package
+
+Step 2. Confirm the WAR exists:
+
+    ls target/bloodbank.war
+
+Step 3. Create a file named Dockerfile in the same project directory:
+
+    FROM tomcat:9.0-jdk17
+    COPY target/bloodbank.war /usr/local/tomcat/webapps/bloodbank.war
+    EXPOSE 8080
+    CMD ["catalina.sh", "run"]
+
+Step 4. Build the image:
+
+    docker build -t bloodbank-app:v1 .
+
+Step 5. Load it into Minikube:
+
+    minikube image load bloodbank-app:v1
+
+Step 6. Check the image:
+
+    minikube image ls
+
+D. CREATE A DEPLOYMENT
+
+Step 1. Create a file named deployment.yaml:
+
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: bloodbank-deployment
+    spec:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: bloodbank
+      template:
+        metadata:
+          labels:
+            app: bloodbank
+        spec:
+          containers:
+          - name: bloodbank-container
+            image: bloodbank-app:v1
+            imagePullPolicy: IfNotPresent
+            ports:
+            - containerPort: 8080
+
+Step 2. Save the file.
+
+Step 3. Apply it:
+
+    kubectl apply -f deployment.yaml
+
+Step 4. Check the Deployment:
+
+    kubectl get deployments
+
+Step 5. Check Pods:
+
+    kubectl get pods
+
+Step 6. Wait until the Pods show Running and Ready.
+
+E. CREATE A SERVICE TO ACCESS THE APPLICATION
+
+Step 1. Create service.yaml:
+
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: bloodbank-service
+    spec:
+      type: NodePort
+      selector:
+        app: bloodbank
+      ports:
+      - port: 8080
+        targetPort: 8080
+        nodePort: 30080
+
+Step 2. Apply it:
+
+    kubectl apply -f service.yaml
+
+Step 3. Check the Service:
+
+    kubectl get services
+
+Step 4. Ask Minikube for the service URL:
+
+    minikube service bloodbank-service --url
+
+Step 5. Open the printed URL and append /bloodbank/ if required, because
+the WAR file is named bloodbank.war.
+
+F. SCALE THE DEPLOYMENT
+
+To increase to three Pods:
+
+    kubectl scale deployment bloodbank-deployment --replicas=3
+
+Check:
+
+    kubectl get pods
+    kubectl get deployments
+
+To reduce to one Pod:
+
+    kubectl scale deployment bloodbank-deployment --replicas=1
+
+G. DELETE THE PRACTICAL RESOURCES
+
+Delete the Service:
+
+    kubectl delete -f service.yaml
+
+Delete the Deployment:
+
+    kubectl delete -f deployment.yaml
+
+Stop Minikube:
+
+    minikube stop
+
+To remove the cluster completely:
+
+    minikube delete
+
+Use minikube delete only if you want to remove the local cluster.
+
+QUESTION 2 — Run a Nagios container and review host status dashboards.
+
+ANSWER
+
+Nagios is an infrastructure monitoring system. It checks hosts and services
+and displays their status. Nagios Core is the monitoring engine; plugins
+perform checks.
+
+The question asks for a Nagios container. The exact container image, web
+port, credentials, and volume locations depend on the chosen Nagios image.
+Use a maintained image and follow that image's documentation. Do not guess
+its credentials or configuration paths.
+
+A. RUN NAGIOS AS A CONTAINER
+
+Step 1. Make sure Docker is running:
+
+    docker --version
+
+Step 2. Select a Nagios image and read its documentation for the correct
+image name, required environment variables, ports, and credentials.
+
+Step 3. Run the container using the documented image settings. The general
+command structure is:
+
+    docker run -d --name nagios -p 8081:80 IMAGE_NAME
+
+Replace IMAGE_NAME with the actual documented image. This is a command
+template, not a guarantee that every Nagios image listens on container
+port 80.
+
+Step 4. Check that it is running:
+
+    docker ps
+
+Step 5. Check its logs:
+
+    docker logs nagios
+
+Step 6. Open the web address and port specified by the image documentation.
+For the example host mapping above, that would be:
+
+    http://localhost:8081/
+
+The login details depend on the selected image and configuration. Change
+default credentials before exposing a monitoring dashboard beyond a trusted
+lab network.
+
+B. REVIEW THE NAGIOS DASHBOARD
+
+Step 1. Sign in using the credentials configured for the chosen image.
+
+Step 2. Open the host status page.
+
+Step 3. Review whether each configured host is UP or DOWN.
+
+Step 4. Open the service status page.
+
+Step 5. Review whether each monitored service is OK, WARNING, CRITICAL,
+or UNKNOWN.
+
+Step 6. If a host/service is not being monitored, configure the relevant
+host/service check and plugin using the image's or Nagios installation's
+documentation.
+
+C. CHECK A NAGIOS SERVICE INSTALLED DIRECTLY ON UBUNTU
+
+If Nagios is installed as a system service instead of a container, use:
+
+    sudo systemctl status nagios
+
+To check only whether it is active:
+
+    sudo systemctl is-active nagios
+
+To inspect logs:
+
+    sudo journalctl -u nagios -n 100 --no-pager
+
+The exact service name can differ. Find it with:
+
+    systemctl list-units --type=service | grep -i nagios
+
+------------------------------------------------------------
+SCENARIO-BASED QUESTIONS — KUBERNETES & NAGIOS
+------------------------------------------------------------
+
+QUESTION 1. How would you debug a failed Deployment in Kubernetes using
+kubectl diagnostic commands?
+
+ANSWER:
+Use the following sequence:
+
+1. Check the Deployment:
+
+       kubectl get deployments
+
+2. Check the Pods:
+
+       kubectl get pods
+
+3. Select the failed Pod and inspect its details:
+
+       kubectl describe pod POD_NAME
+
+4. Read its logs:
+
+       kubectl logs POD_NAME
+
+5. If the container restarted, read the previous container logs:
+
+       kubectl logs POD_NAME --previous
+
+6. Check recent cluster events:
+
+       kubectl get events --sort-by=.metadata.creationTimestamp
+
+7. Inspect the Deployment:
+
+       kubectl describe deployment DEPLOYMENT_NAME
+
+These commands help identify image-pull failures, scheduling problems,
+container crashes, configuration errors, and failed health checks.
+
+QUESTION 2. How do you roll back a faulty Deployment in Kubernetes if an
+update introduces bugs?
+
+ANSWER:
+First check the rollout history:
+
+    kubectl rollout history deployment/bloodbank-deployment
+
+Then undo the latest rollout:
+
+    kubectl rollout undo deployment/bloodbank-deployment
+
+Check whether the rollback completes:
+
+    kubectl rollout status deployment/bloodbank-deployment
+
+If you need a specific previous revision, inspect the history and use:
+
+    kubectl rollout undo deployment/bloodbank-deployment --to-revision=1
+
+Replace 1 with the revision number you actually want.
+
+QUESTION 3. How do you debug a running Pod when application-level errors
+occur inside the container?
+
+ANSWER:
+1. Find the Pod name:
+
+       kubectl get pods
+
+2. Check application logs:
+
+       kubectl logs POD_NAME
+
+3. Open a shell inside the Pod:
+
+       kubectl exec -it POD_NAME -- /bin/sh
+
+4. Inside the container, inspect files, processes, and environment variables.
+   For example:
+
+       pwd
+       ls
+       ps
+       printenv
+
+5. Exit the container shell:
+
+       exit
+
+If the Pod has multiple containers, specify the required container:
+
+    kubectl logs POD_NAME -c CONTAINER_NAME
+    kubectl exec -it POD_NAME -c CONTAINER_NAME -- /bin/sh
+
+QUESTION 4. How can you check whether the Nagios monitoring daemon/service
+is running properly on your system?
+
+ANSWER:
+For a systemd installation:
+
+    sudo systemctl status nagios
+
+For a short active/inactive result:
+
+    sudo systemctl is-active nagios
+
+For a Nagios Docker container:
+
+    docker ps
+    docker logs nagios
+
+Also inspect the Nagios dashboard to confirm that configured hosts and
+services are being checked. A running daemon alone does not prove that every
+monitoring check is correctly configured.
+
+QUESTION 5. What are the main advantages of using Nagios for IT
+infrastructure monitoring?
+
+ANSWER:
+1. It monitors servers, hosts, network devices, and services.
+2. It detects availability and service failures.
+3. It displays host and service status in a central dashboard.
+4. It supports plugins for different monitoring checks.
+5. It can send alerts/notifications when configured.
+6. It helps administrators identify infrastructure problems quickly.
+7. It helps reduce service downtime by making failures visible.
+
+============================================================
+PRACTICAL 4 — DOCKER COMPOSE: MULTI-CONTAINER ORCHESTRATION
+[25 MARKS]
+============================================================
+
+QUESTION 1 — Define services, networks, and volumes in a docker-compose.yml
+configuration file.
+
+ANSWER
+
+Docker Compose defines multiple related containers in one YAML file.
+
+The question asks for a web application container, a PostgreSQL container,
+persistent storage, and a custom network.
+
+IMPORTANT PROJECT CHECK:
+The uploaded Blood Bank ZIP contains a Maven WAR/JSP application. It does
+not contain a PostgreSQL JDBC dependency, database connection configuration,
+or database schema. The Compose file below starts a PostgreSQL service and
+a web application service, but the supplied application will not use the
+database until database integration is added to the application.
+
+A. BUILD THE WEB APPLICATION IMAGE
+
+Step 1. Open the BloodBanksystem project directory.
+
+Step 2. Build the WAR:
+
+    mvn clean package
+
+Step 3. Confirm:
+
+    target/bloodbank.war
+
+Step 4. Create a Dockerfile:
+
+    FROM tomcat:9.0-jdk17
+    COPY target/bloodbank.war /usr/local/tomcat/webapps/bloodbank.war
+    EXPOSE 8080
+    CMD ["catalina.sh", "run"]
+
+Tomcat 9 is used because the supplied web.xml declares Servlet 4.0 /
+javax.servlet. Tomcat 10 uses Jakarta APIs and may require application
+migration.
+
+Step 5. Build the image:
+
+    docker build -t bloodbank-app:1.0 .
+
+B. CREATE docker-compose.yml
+
+Create docker-compose.yml in the same directory:
+
+    services:
+      web:
+        image: bloodbank-app:1.0
+        container_name: bloodbank-web
+        ports:
+          - "8080:8080"
+        depends_on:
+          - db
+        networks:
+          - bloodbank-network
+
+      db:
+        image: postgres:16
+        container_name: bloodbank-db
+        environment:
+          POSTGRES_DB: bloodbank
+          POSTGRES_USER: blooduser
+          POSTGRES_PASSWORD: change_this_password
+        volumes:
+          - postgres-data:/var/lib/postgresql/data
+        networks:
+          - bloodbank-network
+
+    networks:
+      bloodbank-network:
+        driver: bridge
+
+    volumes:
+      postgres-data:
+
+C. UNDERSTAND THE YAML
+
+services:
+    Lists the containers that make up the application.
+
+web:
+    Defines the web application container.
+
+image:
+    Specifies the Docker image to run.
+
+ports:
+    "8080:8080" maps host port 8080 to container port 8080.
+    The format is HOST_PORT:CONTAINER_PORT.
+
+depends_on:
+    Establishes startup ordering. It does not guarantee that PostgreSQL is
+    fully ready to accept connections.
+
+db:
+    Defines the PostgreSQL database container.
+
+environment:
+    Sets the initial database name, user, and password for the official
+    PostgreSQL image. Change the example password and do not commit real
+    secrets to a public repository.
+
+volumes:
+    Mounts a named volume at PostgreSQL's data directory. This preserves
+    database files when the container is removed and recreated.
+
+networks:
+    Defines a custom network shared by the web and database services.
+
+The web container can address PostgreSQL using:
+    Host: db
+    Port: 5432
+
+The database port does not need to be published to the host merely for the
+web container to reach it.
+
+D. RUN THE COMPOSE STACK
+
+Step 1. Open a terminal in the folder containing docker-compose.yml.
+
+Step 2. Check Docker:
+
+    docker --version
+
+Step 3. Check Compose:
+
+    docker compose version
+
+Step 4. Start both services in the background:
+
+    docker compose up -d
+
+Step 5. Check their status:
+
+    docker compose ps
+
+Step 6. View logs:
+
+    docker compose logs
+
+Step 7. View only the web logs:
+
+    docker compose logs web
+
+Step 8. View only the database logs:
+
+    docker compose logs db
+
+Step 9. Open the application:
+
+    http://localhost:8080/bloodbank/
+
+The WAR is named bloodbank.war, so the Tomcat context path is normally
+/bloodbank/.
+
+E. VERIFY THE DATABASE CONTAINER
+
+Check containers:
+
+    docker compose ps
+
+Check PostgreSQL logs:
+
+    docker compose logs db
+
+You can open a PostgreSQL shell inside the database container:
+
+    docker exec -it bloodbank-db psql -U blooduser -d bloodbank
+
+At the psql prompt, run:
+
+    \l
+
+This lists databases.
+
+Exit:
+
+    \q
+
+This proves the PostgreSQL container is running and accepts a local
+connection. It does not prove that the Blood Bank web application is
+connected to PostgreSQL.
+
+------------------------------------------------------------
+SCENARIO-BASED QUESTIONS — DOCKER COMPOSE
+------------------------------------------------------------
+
+QUESTION 1. How do you stop and clean up your running container stack and
+remove associated resources without losing volume data?
+
+ANSWER:
+Run:
+
+    docker compose down
+
+This stops and removes the Compose containers and network. Named volumes
+are retained by default, so the PostgreSQL data remains.
+
+Do not use:
+
+    docker compose down -v
+
+because -v removes the named volumes and the database data stored in them.
+
+QUESTION 2. You updated some code and want to restart your frontend,
+backend, and DB containers quickly. What is the easiest way to manage this
+lifecycle?
+
+ANSWER:
+Docker Compose manages all services together.
+
+If you only want to restart existing containers:
+
+    docker compose restart
+
+If you changed application code that is included in the Docker image, you
+must rebuild the image and recreate the container. For this project:
+
+    mvn clean package
+    docker build -t bloodbank-app:1.0 .
+    docker compose up -d --force-recreate web
+
+If the Compose file uses build: instead of image:, you can commonly use:
+
+    docker compose up -d --build
+
+A restart by itself does not rebuild an image.
+
+QUESTION 3. How do you share your application configuration and code as an
+image bundle with a teammate using Docker images?
+
+ANSWER:
+One method is to push the image to a registry.
+
+On your machine:
+
+    docker login
+    docker tag bloodbank-app:1.0 USERNAME/bloodbank-app:1.0
+    docker push USERNAME/bloodbank-app:1.0
+
+On the teammate's machine:
+
+    docker pull USERNAME/bloodbank-app:1.0
+
+Replace USERNAME with the actual registry username.
+
+Another method is to save the image as a tar file:
+
+    docker save -o bloodbank-app.tar bloodbank-app:1.0
+
+The teammate loads it using:
+
+    docker load -i bloodbank-app.tar
+
+Share the Compose YAML separately. The image does not automatically include
+the Compose file or the database's persistent volume. Do not share real
+passwords or secrets in public files.
+
+QUESTION 4. What happens when you try to run two containers that expose the
+exact same port on the host machine?
+
+ANSWER:
+The second container cannot bind to a host port that is already being used.
+Docker reports a port allocation or address-already-in-use error.
+
+For example, if one container uses:
+
+    "8080:8080"
+
+the second container cannot also use host port 8080.
+
+Give the second container a different host port:
+
+    "8081:8080"
+
+Now requests to host port 8081 are forwarded to port 8080 inside the second
+container.
+
+QUESTION 5. Why are networks specified in Docker Compose instead of relying
+solely on default bridge networking for interdependent services?
+
+ANSWER:
+A custom Compose network gives the services a defined network for
+communication. Containers on that network can reach each other using
+service names, such as db, rather than hard-coded IP addresses. It also
+groups related services, supports isolation from unrelated containers, and
+makes the network configuration reproducible from the YAML file.
+
+============================================================
+FINAL COMMAND REVISION — ONLY THE COMMANDS YOU MUST REMEMBER
+============================================================
+
+JENKINS / MAVEN
+
+    mvn clean
+    mvn install
+    mvn test
+    mvn package
+
+Print Jenkins build number:
+
+    echo "Build Number: ${env.BUILD_NUMBER}"
+
+AWS / UBUNTU
+
+    sudo apt update
+    sudo apt install -y git
+    sudo apt install -y openjdk-17-jdk maven
+    java -version
+    mvn -version
+
+SSH:
+
+    ssh -i "my-key.pem" ubuntu@EC2_PUBLIC_IP
+
+Build WAR:
+
+    mvn clean package
+
+Apache:
+
+    sudo apt install -y apache2
+    sudo systemctl enable --now apache2
+    curl http://localhost/
+
+Kubernetes / MINIKUBE
+
+    minikube start --driver=docker
+    minikube status
+    kubectl cluster-info
+    kubectl get nodes
+    kubectl apply -f deployment.yaml
+    kubectl apply -f service.yaml
+    kubectl get deployments
+    kubectl get pods
+    kubectl get services
+    kubectl scale deployment bloodbank-deployment --replicas=3
+    kubectl describe pod POD_NAME
+    kubectl logs POD_NAME
+    kubectl exec -it POD_NAME -- /bin/sh
+    kubectl rollout history deployment/bloodbank-deployment
+    kubectl rollout undo deployment/bloodbank-deployment
+    kubectl delete -f service.yaml
+    kubectl delete -f deployment.yaml
+
+NAGIOS
+
+    sudo systemctl status nagios
+    sudo systemctl is-active nagios
+    docker ps
+    docker logs nagios
+
+DOCKER COMPOSE
+
+    docker build -t bloodbank-app:1.0 .
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose restart
+    docker compose down
+    docker compose down -v
+    docker save -o bloodbank-app.tar bloodbank-app:1.0
+    docker load -i bloodbank-app.tar
+    docker push USERNAME/bloodbank-app:1.0
+    docker pull USERNAME/bloodbank-app:1.0
+
+END OF SET–8 QUESTION-WISE ANSWERS AND PRACTICAL PROCEDURES
